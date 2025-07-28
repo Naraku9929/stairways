@@ -5,9 +5,16 @@ import { GMs, handleTeleportRequestGM } from './teleport.js'
 // Foundry v13 moved the helper into foundry.canvas.loadTexture. Provide a
 // wrapper that works in both core generations.
 const loadTex = (src) => {
-  const versionIs13 = foundry.utils.isNewerVersion ? foundry.utils.isNewerVersion(game.version, '13.0.0') : false
-  if (versionIs13) return foundry.canvas.loadTexture(src)
-  return loadTexture(src)
+  // Check if the new API exists first
+  if (foundry.canvas?.loadTexture) {
+    return foundry.canvas.loadTexture(src)
+  }
+  // Fallback to global loadTexture for older versions
+  if (typeof loadTexture !== 'undefined') {
+    return loadTexture(src)
+  }
+  // Final fallback
+  throw new Error('No texture loading function available')
 }
 
 /**
@@ -35,8 +42,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
     const disabled = this.stairway.document.disabled === true
     const hidden = this.stairway.document.hidden === true
 
-    const versionIs13 = foundry.utils.isNewerVersion ? foundry.utils.isNewerVersion(game.version, '13.0.0') : false
-    const PreciseTextClass = versionIs13 ? foundry.canvas.containers.PreciseText : PreciseText
+    const PreciseTextClass = foundry.canvas.containers.PreciseText
 
     // scene label
     this.sceneLabel = this.sceneLabel || this.addChild(new PreciseTextClass(this.stairway.sceneLabel, this.stairway.controlIcon.sceneLabelTextStyle))

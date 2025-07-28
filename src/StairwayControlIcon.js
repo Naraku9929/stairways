@@ -2,9 +2,16 @@ import { STAIRWAY_DEFAULTS, COLOR } from './StairwayConfig.js'
 
 // Polyfill for loadTexture in FVTT v13
 const loadTex = (src) => {
-  const versionIs13 = foundry.utils.isNewerVersion ? foundry.utils.isNewerVersion(game.version, '13.0.0') : false
-  if (versionIs13) return foundry.canvas.loadTexture(src)
-  return loadTexture(src)
+  // Check if the new API exists first
+  if (foundry.canvas?.loadTexture) {
+    return foundry.canvas.loadTexture(src)
+  }
+  // Fallback to global loadTexture for older versions
+  if (typeof loadTexture !== 'undefined') {
+    return loadTexture(src)
+  }
+  // Final fallback
+  throw new Error('No texture loading function available')
 }
 
 const ICON_SIZE = 100
@@ -74,8 +81,7 @@ export class StairwayControlIcon extends foundry.applications.api.ControlIcon {
     this.icon.height = this.height
     this.icon.tint = Number.isNumeric(this.tintColor) ? this.tintColor : 0xFFFFFF
 
-    const versionIs13 = foundry.utils.isNewerVersion ? foundry.utils.isNewerVersion(game.version, '13.0.0') : false
-    const PreciseTextClass = versionIs13 ? foundry.canvas.containers.PreciseText : PreciseText
+    const PreciseTextClass = foundry.canvas.containers.PreciseText
 
     // Draw scene label
     this.sceneLabel = this.sceneLabel || this.addChild(new PreciseTextClass(this.sceneLabelText, this.sceneLabelTextStyle))

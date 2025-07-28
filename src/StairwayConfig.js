@@ -26,33 +26,52 @@ export const COLOR = {
  * @param stairway {Stairway} The Stairway object for which settings are being configured
  * @param options {Object}     StairwayConfig ui options (see Application)
  */
-export class StairwayConfig extends DocumentSheet {
+const { DocumentSheetV2 } = foundry.applications.sheets
+
+export class StairwayConfig extends DocumentSheetV2 {
   /** @inheritdoc */
-  static get defaultOptions () {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: 'stairway-config',
-      classes: ['sheet', 'stairway-sheet'],
+  static DEFAULT_OPTIONS = {
+    id: 'stairway-config',
+    classes: ['stairway-sheet'],
+    tag: 'form',
+    window: {
       title: 'stairways.ui.config.title',
-      template: 'modules/stairways/templates/stairway-config.hbs',
+      icon: 'fas fa-stairs'
+    },
+    position: {
       width: 480,
-      height: 'auto',
-      tabs: [{ navSelector: '.tabs', contentSelector: 'form', initial: 'main' }]
-    })
+      height: 'auto'
+    },
+    form: {
+      handler: StairwayConfig.#onSubmitForm,
+      submitOnChange: true,
+      closeOnSubmit: false
+    }
   }
 
-  /* -------------------------------------------- */
-
-  /** @override */
-  async _render (force, options) {
-    if (!this.rendered) this.original = this.object.clone({}, { keepId: true })
-    return super._render(force, options)
+  static PARTS = {
+    header: { template: 'templates/generic/form-header.hbs' },
+    tabs: { template: 'templates/generic/tab-navigation.hbs' },
+    main: { template: 'modules/stairways/templates/stairway-config-main.hbs' },
+    label: { template: 'modules/stairways/templates/stairway-config-label.hbs' },
+    position: { template: 'modules/stairways/templates/stairway-config-position.hbs' }
   }
 
-  /* -------------------------------------------- */
+  tabGroups = {
+    sheet: 'main'
+  }
 
-  /** @override */
-  getData (options) {
-    const data = super.getData(options)
+  // Form submission handler
+  static async #onSubmitForm (event, form, formData) {
+    const expandedData = foundry.utils.expandObject(formData.object)
+    return this.document.update(expandedData)
+  }
+
+  // Data preparation for v2
+  async _prepareContext (options) {
+    const context = await super._prepareContext(options)
+
+    // Add stairway-specific context
     const scenes = {
       null: game.i18n.localize('stairways.ui.config.current-scene')
     }
@@ -79,17 +98,26 @@ export class StairwayConfig extends DocumentSheet {
 
     // replace null with defaults
     for (const key in STAIRWAY_DEFAULTS) {
-      data.data[key] ??= STAIRWAY_DEFAULTS[key]
+      context.document[key] ??= STAIRWAY_DEFAULTS[key]
     }
 
     return {
-      ...data,
+      ...context,
       status: this.document.object.status,
       scenes,
       icons,
       fontFamilies,
+      tabs: this._getTabs(options.parts),
       submitText: game.i18n.localize('stairways.ui.config.submit')
     }
+  }
+
+  _getTabs (parts) {
+    return [
+      { id: 'main', group: 'sheet', icon: 'fas fa-cog', label: 'stairways.ui.config.tab-main' },
+      { id: 'label', group: 'sheet', icon: 'fas fa-font', label: 'stairways.ui.config.tab-label' },
+      { id: 'position', group: 'sheet', icon: 'fas fa-map-marker-alt', label: 'stairways.ui.config.tab-position' }
+    ]
   }
 
   /* -------------------------------------------- */

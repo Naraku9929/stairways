@@ -9,13 +9,9 @@ export const injectControls = (controls) => {
     icon: 'fas fa-stairs',
     visible: game.user.isGM,
     // Core switched from onClick (<= v12) to onChange (>= v13) for control groups.
-    ...(foundry.utils.isNewerVersion ? foundry.utils.isNewerVersion(game.version, '13.0.0') : false ? {
-      onChange: (_evt, active) => {
-        if (active) foundry.canvas.canvas.stairways?.activate()
-      }
-    } : {
-      onClick: () => foundry.canvas.canvas.stairways?.activate()
-    }),
+    onChange: (_evt, active) => {
+      if (active) foundry.canvas.canvas.stairways?.activate()
+    },
     tools: [
       {
         name: MODE_STAIRWAY,

@@ -5,7 +5,16 @@
   "version": "0.10.6",
   "compatibility": {
     "minimum": 12,
-    "verified": "13.0.0"
+    "verified": "13.344"
+  },
+  "relationships": {
+    "requires": [
+      {
+        "id": "foundry",
+        "type": "system",
+        "minimum": "13.341"
+      }
+    ]
   },
   "manifestPlusVersion": "1.2.0",
   "authors": [

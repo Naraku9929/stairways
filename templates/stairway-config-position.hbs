@@ -1,0 +1,16 @@
+<div class="form-group">
+      <label>{{ localize "XCoord" }} <span class="units">({{ localize "Pixels" }})</span></label>
+      <input type="text" name="x" placeholder="X" value="{{ data.x }}" data-dtype="Number" />
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "YCoord" }} <span class="units">({{ localize "Pixels" }})</span></label>
+      <input type="text" name="y" placeholder="Y" value="{{ data.y }}" data-dtype="Number" />
+    </div>
+
+    {{#if data.locked}}
+    <div class="form-group">
+      <label>{{ localize "stairways.ui.config.locked" }}</label>
+      <input type="checkbox" name="locked" data-dtype="Boolean" {{ checked data.locked }} />
+    </div>
+    {{/if}} 

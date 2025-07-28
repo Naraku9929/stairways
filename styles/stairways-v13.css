@@ -1,0 +1,31 @@
+/* V13 Theme Support */
+@layer foundry.stairways {
+  .stairway-sheet {
+    /* Use CSS custom properties for theming */
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-primary);
+  }
+  
+  .stairway-sheet .form-group label {
+    color: var(--color-text-secondary);
+  }
+  
+  .stairway-sheet input, 
+  .stairway-sheet select {
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border-input);
+    color: var(--color-text-input);
+  }
+  
+  /* Support for light/dark theme switching */
+  .stairway-sheet button {
+    background: var(--color-bg-button);
+    color: var(--color-text-button);
+    border: 1px solid var(--color-border-button);
+  }
+  
+  .stairway-sheet button:hover {
+    background: var(--color-bg-button-hover);
+  }
+} 

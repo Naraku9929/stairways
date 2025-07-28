@@ -16,4 +16,14 @@ export function registerSettings () {
     type: Boolean,
     default: false
   })
+
+  game.settings.register(SETTINGS_KEY, 'useV13Features', {
+    name: 'Use V13 Enhanced Features',
+    hint: 'Enable enhanced features available in FoundryVTT v13',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+    requiresReload: true
+  })
 }
