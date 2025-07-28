@@ -3,8 +3,8 @@ import { StairwayDocument } from './StairwayDocument.js'
 /// Hook modifyDocument events
 /// we need to hijack them and redirect the save location
 export const hookModifyDocument = () => {
-  const origDispatch = SocketInterface.prototype.constructor.dispatch
-  SocketInterface.prototype.constructor.dispatch = function (eventName, request) {
+  const origDispatch = foundry.helpers.SocketInterface.prototype.constructor.dispatch
+  foundry.helpers.SocketInterface.prototype.constructor.dispatch = function (eventName, request) {
     // log and report error for unexpected behaviour for further investigation
     const reportError = (...args) => {
       console.error(...args)

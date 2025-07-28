@@ -57,6 +57,14 @@ Hooks.on('sightRefresh', (sightLayer) => {
   }
 })
 
+Hooks.once('canvasReady', () => {
+  if (!canvas.stairways) {
+    console.error("Stairways layer failed to load!")
+  } else {
+    console.log("Stairways layer is ready.")
+  }
+})
+
 Hooks.on(`paste${Stairway.embeddedName}`, StairwayLayer.onPasteStairway)
 
 Hooks.on('renderModuleManagement', async (moduleManagement, html) => {
