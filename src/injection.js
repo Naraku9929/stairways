@@ -9,7 +9,7 @@ const fields = foundry.data.fields
 
 export const injectStairways = () => {
   // register stairway classes
-  foundry.core.CONFIG.Stairway = {
+  CONFIG.Stairway = {
     documentClass: StairwayDocument,
     objectClass: Stairway,
     layerClass: StairwayLayer,
@@ -30,15 +30,10 @@ export const injectStairways = () => {
     }
   )
 
-  foundry.applications.apps.DocumentSheetConfig.registerSheet(
-    StairwayDocument,
-    'stairways',
-    StairwayConfig,
-    {
-      makeDefault: true,
-      types: ['base']
-    }
-  )
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(StairwayDocument, 'stairways', StairwayConfig, {
+    makeDefault: true,
+    types: ['base']
+  })
 
   hookCanvas()
   hookBaseScene()
@@ -46,49 +41,87 @@ export const injectStairways = () => {
   hookTokenLayer()
 
   // add stairways as embedded document for existing scenes
-  for (const scene of foundry.Game.prototype.scenes) {
+  for (const scene of game.data.scenes) {
     if (!Array.isArray(scene.flags.stairways)) {
       scene.flags.stairways = []
     }
-    //scene.stairways = foundry.utils.duplicate(scene.flags.stairways || [])
-    scene.stairways = new foundry.abstract.EmbeddedCollection(StairwayDocument, scene.flags.stairways.map(s => new StairwayDocument(s, { parent: scene })));
+    scene.stairways = foundry.utils.duplicate(scene.flags.stairways || [])
   }
 }
 
 const hookCanvas = () => {
-  // Use the v13 canvas layer registration system
-  CONFIG.Canvas.layers.stairways = {
-    layerClass: StairwayLayer,
-    group: 'interface'
-  }
-  
-  // Ensure layer is properly registered in canvas groups
-  Object.defineProperty(foundry.canvas.Canvas.prototype, 'stairways', {
-    get: function() {
-      return this.layers.find(l => l.name === 'stairways')
+  // inject StairwayLayer into the canvas layers list
+  const origLayers = foundry.canvas.Canvas.layers
+  CONFIG.Canvas.layers = Object.keys(origLayers).reduce((layers, key, i) => {
+    layers[key] = origLayers[key]
+
+    // inject stairways layer after walls
+    if (key === 'walls') {
+      layers.stairways = {
+        layerClass: StairwayLayer,
+        group: 'interface'
+      }
     }
-  })
+
+    return layers
+  }, {})
+
+  // FIXME: workaround for #23
+  if (!Object.is(foundry.canvas.Canvas.layers, CONFIG.Canvas.layers)) {
+    console.error('Possible incomplete layer injection by other module detected! Trying workaround...')
+
+    const layers = foundry.canvas.Canvas.layers
+    Object.defineProperty(foundry.canvas.Canvas, 'layers', {
+      get: function () {
+        return foundry.utils.mergeObject(CONFIG.Canvas.layers, layers)
+      }
+    })
+  }
+
+  // Hook the Canvas.getLayerByEmbeddedName
+  const origGetLayerByEmbeddedName = foundry.canvas.Canvas.prototype.getLayerByEmbeddedName
+  foundry.canvas.Canvas.prototype.getLayerByEmbeddedName = function (embeddedName) {
+    if (embeddedName === 'Stairway') {
+      return this.stairways
+    } else {
+      return origGetLayerByEmbeddedName.call(this, embeddedName)
+    }
+  }
 }
 
 const hookBaseScene = () => {
+  // inject Stairway into scene metadata
   const BaseScene = foundry.documents.BaseScene
-  
-  // Use v13's document registration system
-  if (BaseScene.defineSchema) {
-    const originalDefineSchema = BaseScene.defineSchema
-    BaseScene.defineSchema = function() {
-      const schema = originalDefineSchema.call(this)
-      if (!schema.stairways) {
-        schema.stairways = new foundry.data.fields.EmbeddedCollectionField(BaseStairway)
+
+  Object.defineProperty(BaseScene.prototype.constructor, 'stairways', { value: [] })
+
+  const sceneMetadata = Object.getOwnPropertyDescriptor(BaseScene.prototype.constructor, 'metadata')
+  // Hook the BaseScene#metadata getter
+  Object.defineProperty(BaseScene.prototype.constructor, 'metadata', {
+    value: Object.freeze(foundry.utils.mergeObject(sceneMetadata.value, {
+      embedded: {
+        Stairway: 'stairways'
       }
-      return schema
-    }
-  }
-  
-  // Ensure metadata is properly set
-  foundry.utils.mergeObject(BaseScene.metadata, {
-    embedded: { Stairway: 'stairways' }
+    }, { inplace: false }))
   })
+
+  // inject BaseStairway into BaseScene schema
+  const defineSchema = BaseScene.prototype.constructor.defineSchema
+
+  // Hook the BaseScene#defineSchema method
+  // TODO: BaseScene#defineSchema may be called by another module before we are able to hook it
+  // but we want to push out a fix for breaking changes in FoundryVTT 10, so ignore that for now
+  // (see hookSceneData() in previous version)
+  BaseScene.prototype.constructor.defineSchema = function () {
+    const schema = defineSchema()
+
+    // inject stairways schema once
+    if (!schema.stairways) {
+      schema.stairways = new fields.EmbeddedCollectionField(BaseStairway)
+    }
+
+    return schema
+  }
 }
 
 const hookControlsLayer = () => {
@@ -104,11 +137,11 @@ const hookControlsLayer = () => {
     this.stairways = this.addChild(new PIXI.Container())
 
     // Iterate over all stairways
-    for (const stairway of foundry.canvas.canvas.stairways.placeables) {
+    for (const stairway of canvas.stairways.placeables) {
       this.createStairwayControl(stairway)
     }
 
-    this.stairways.visible = !foundry.canvas.canvas.stairways.active
+    this.stairways.visible = !canvas.stairways.active
   }
   foundry.canvas.layers.ControlsLayer.prototype.createStairwayControl = function (stairway) {
     const sw = this.stairways.addChild(new StairwayControl(stairway))
@@ -122,12 +155,12 @@ const hookTokenLayer = () => {
   const origActivate = foundry.canvas.layers.TokenLayer.prototype.activate
   foundry.canvas.layers.TokenLayer.prototype.activate = function () {
     origActivate.call(this)
-    if (foundry.canvas.canvas.controls) foundry.canvas.canvas.controls.stairways.visible = true
+    if (canvas.controls) canvas.controls.stairways.visible = true
   }
 
   const origDeactivate = foundry.canvas.layers.TokenLayer.prototype.deactivate
   foundry.canvas.layers.TokenLayer.prototype.deactivate = function () {
     origDeactivate.call(this)
-    if (foundry.canvas.canvas.controls) foundry.canvas.canvas.controls.stairways.visible = false
+    if (canvas.controls) canvas.controls.stairways.visible = false
   }
 }

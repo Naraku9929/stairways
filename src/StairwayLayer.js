@@ -5,13 +5,11 @@ import { StairwayDocument } from './StairwayDocument.js'
 const STAIRWAY_LAYER_ZINDEX = 45
 
 /**
- * The StairwayLayer subclass of PlaceablesLayer.
+ * The Stairway Layer which displays stairway icons within the rendered Scene.
  * @extends {PlaceablesLayer}
  */
 export class StairwayLayer extends foundry.canvas.layers.PlaceablesLayer {
-  /**
-   * Define the named document type which is managed by this Canvas Layer
-   */
+  /** @inheritdoc */
   static get documentName () {
     return 'Stairway'
   }
@@ -46,7 +44,7 @@ export class StairwayLayer extends foundry.canvas.layers.PlaceablesLayer {
     }
 
     // don't use a specific scene if both stairways are on the same scene
-    if (connectionTarget.scene === foundry.canvas.canvas.scene.id) {
+    if (connectionTarget.scene === canvas.scene.id) {
       connectionTarget.scene = null
     }
 
@@ -80,10 +78,10 @@ export class StairwayLayer extends foundry.canvas.layers.PlaceablesLayer {
     // create new stairway
     const doc = new StairwayDocument(
       { ...StairwayLayer.getConnectionTarget(), disabled, hidden, animate, x: origin.x, y: origin.y, _id: foundry.utils.randomID(16) },
-      { parent: foundry.canvas.canvas.scene }
+      { parent: canvas.scene }
     )
     const stairway = new Stairway(doc)
-    return StairwayDocument.create(stairway.document.toObject(false), { parent: foundry.canvas.canvas.scene })
+    return StairwayDocument.create(stairway.document.toObject(false), { parent: canvas.scene })
   }
 
   /* -------------------------------------------- */

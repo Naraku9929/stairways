@@ -1,67 +1,58 @@
 import { STAIRWAY_DEFAULTS, COLOR } from './StairwayConfig.js'
 
-// Polyfill for loadTexture in FVTT v13
-const loadTex = (src) => {
-  // Check if the new API exists first
-  if (foundry.canvas?.loadTexture) {
-    return foundry.canvas.loadTexture(src)
-  }
-  // Fallback to global loadTexture for older versions
-  if (typeof loadTexture !== 'undefined') {
-    return loadTexture(src)
-  }
-  // Final fallback
-  throw new Error('No texture loading function available')
-}
-
 const ICON_SIZE = 100
 const SCALE_BORDER = false
 
 /**
- * An ControlIcon which represents an active Stairway.
- * @extends {ControlIcon}
+ * A helper for drawing a stairway Control Icon
+ * @type {PIXI.Container}
  */
-export class StairwayControlIcon extends foundry.applications.api.ControlIcon {
-  constructor ({ sceneLabel, label, textStyle, typeColor = 0x000000, statusColor = 0x000000, texture, width = 1, height = 1, borderColor = 0xFF5500, tint = null } = {}, ...args) {
-    super()
+export class StairwayControlIcon extends PIXI.Container {
+  /* -------------------------------------------- */
 
-    // public properties
-    this.label = label
-    this.textStyle = textStyle
-    this.sceneLabel = sceneLabel
+  constructor ({ sceneLabel, label, textStyle, typeColor = 0x000000, statusColor = 0x000000, texture, width = 1, height = 1, borderColor = 0xFF5500, tint = null } = {}, ...args) {
+    super(...args)
+
+    // options
+    this.sceneLabelText = sceneLabel
+    this.labelText = label
+    this.labelTextStyle = textStyle
     this.typeColor = typeColor
     this.statusColor = statusColor
-    this.texture = texture
-    this.width = width
-    this.height = height
     this.borderColor = borderColor
-    this.tint = tint
+    this.iconSrc = texture
+    this.tintColor = tint
+    this.iconWidth = width
+    this.iconHeight = height
+    this.rect = this.borderSize
 
-    // private properties
-    this._hover = false
-    this._cached = {}
+    // add offset
+    this.x -= this.width * 0.5
+    this.y -= this.height * 0.5
 
-    // create containers
+    // interactive hit area
+    this.eventMode = 'static'
+    this.interactiveChildren = false
+    this.hitArea = new PIXI.Rectangle(...this.borderSize)
+
+    // create Background, Icon, Border
     this.bg = this.addChild(new PIXI.Graphics())
-    this.border = this.addChild(new PIXI.Graphics())
     this.icon = this.addChild(new PIXI.Sprite())
-    this.text = this.addChild(new PIXI.Text(this.label, this.textStyle))
-    this.sceneText = this.addChild(new PIXI.Text(this.sceneLabel, this.sceneLabelTextStyle))
+    this.border = this.addChild(new PIXI.Graphics())
 
-    this.interactive = true
-    this.hitArea = new PIXI.Rectangle(0, 0, this.width, this.height)
+    this.onmouseenter = this._onHoverIn
+    this.onmouseleave = this._onHoverOut
 
-    // activate listeners
-    this.addListener('mouseover', this._onHoverIn)
-    this.addListener('mouseout', this._onHoverOut)
+    // draw asynchronously
+    this.draw()
   }
 
   /* -------------------------------------------- */
 
   /** @override */
   async draw () {
-    // set icon texture
-    this.icon.texture = await loadTex(this.texture)
+    // load icon texture
+    this.texture = this.texture ?? await loadTexture(this.iconSrc)
 
     // don't draw when destroyed
     if (this.destroyed) return this
@@ -69,10 +60,10 @@ export class StairwayControlIcon extends foundry.applications.api.ControlIcon {
     const scale = this.scale
 
     // Draw background
-    this.bg.clear().beginFill(this.typeColor || 0, 0.4).lineStyle(2 * scale, this.statusColor || 0, 1.0).drawRoundedRect(...this.borderSize, 5).endFill()
+    this.bg.clear().beginFill(this.typeColor || 0, 0.4).lineStyle(2 * scale, this.statusColor || 0, 1.0).drawRoundedRect(...this.rect, 5).endFill()
 
     // Draw border
-    this.border.clear().lineStyle(2 * scale, this.borderColor, 1.0).drawRoundedRect(...this.borderSize, 5).endFill()
+    this.border.clear().lineStyle(2 * scale, this.borderColor, 1.0).drawRoundedRect(...this.rect, 5).endFill()
     this.border.visible = false
 
     // Draw icon
@@ -81,15 +72,13 @@ export class StairwayControlIcon extends foundry.applications.api.ControlIcon {
     this.icon.height = this.height
     this.icon.tint = Number.isNumeric(this.tintColor) ? this.tintColor : 0xFFFFFF
 
-    const PreciseTextClass = foundry.canvas.containers.PreciseText
-
     // Draw scene label
-    this.sceneLabel = this.sceneLabel || this.addChild(new PreciseTextClass(this.sceneLabelText, this.sceneLabelTextStyle))
+    this.sceneLabel = this.sceneLabel || this.addChild(new PreciseText(this.sceneLabelText, this.sceneLabelTextStyle))
     this.sceneLabel.anchor.set(0.5, 1)
     this.sceneLabel.position.set(...this.sceneLabelPosition)
 
     // Draw label
-    this.label = this.label || this.addChild(new PreciseTextClass(this.labelText, this.labelTextStyle))
+    this.label = this.label || this.addChild(new PreciseText(this.labelText, this.labelTextStyle))
     this.label.anchor.set(0.5, 0)
     this.label.position.set(...this.labelPosition)
 

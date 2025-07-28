@@ -1,20 +1,6 @@
 import { COLOR, STAIRWAY_DEFAULTS } from './StairwayConfig.js'
 import { StairwayControlIcon } from './StairwayControlIcon.js'
 
-// Polyfill for loadTexture in FVTT v13
-const loadTex = (src) => {
-  // Check if the new API exists first
-  if (foundry.canvas?.loadTexture) {
-    return foundry.canvas.loadTexture(src)
-  }
-  // Fallback to global loadTexture for older versions
-  if (typeof loadTexture !== 'undefined') {
-    return loadTexture(src)
-  }
-  // Final fallback
-  throw new Error('No texture loading function available')
-}
-
 /**
  * An Stairway is an implementation of PlaceableObject which represents a teleport between to points.
  * @extends {PlaceableObject}
@@ -44,7 +30,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
     }
   }
 
-  static setConnectionTarget (name = 'sw-' + foundry.utils.randomID(8), scene = foundry.canvas.canvas.scene.id) {
+  static setConnectionTarget (name = 'sw-' + foundry.utils.randomID(8), scene = canvas.scene.id) {
     const connectionTarget = Stairway.connectionTarget = { scene, name }
     return connectionTarget
   }
@@ -103,7 +89,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
    * @return {boolean}
    */
   get onScene () {
-    return this.document.scene === null || this.document.scene === foundry.canvas.canvas.scene.id
+    return this.document.scene === null || this.document.scene === canvas.scene.id
   }
 
   /* -------------------------------------------- */
@@ -226,7 +212,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
   get isConnectionTarget () {
     if (Stairway.connectionTarget) {
       const { scene, name } = Stairway.connectionTarget
-      return scene === foundry.canvas.canvas.scene.id && name === this.name
+      return scene === canvas.scene.id && name === this.name
     }
 
     return false
@@ -290,7 +276,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
     this.line = this.addChild(new PIXI.Graphics())
     this.controlIcon = this.addChild(new StairwayControlIcon({ sceneLabel: this.sceneLabel, sceneLabelTextStyle: this.sceneLabelTextStyle, label: this.label, textStyle: this.labelTextStyle, texture: this.icon, width: this.width, height: this.height }))
     this.lockIcon = this.addChild(new PIXI.Sprite())
-    this.lockIcon.texture = await loadTex('icons/svg/padlock.svg')
+    this.lockIcon.texture = await loadTexture('icons/svg/padlock.svg')
 
     // Initial rendering
     this.refresh()
@@ -366,7 +352,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
       this.otherPlaceable = null
     } else if (!this._original) {
       // find partner in same scene, ignore move clones
-      const others = foundry.canvas.canvas.stairways.placeables.filter((other) => other.onScene && !other._original && this.name === other.name && this.id !== other.id)
+      const others = canvas.stairways.placeables.filter((other) => other.onScene && !other._original && this.name === other.name && this.id !== other.id)
 
       if (others.length === 1) {
         // found partner
@@ -447,7 +433,7 @@ export class Stairway extends foundry.canvas.placeables.PlaceableObject {
   /** @override */
   _onCreate (...args) {
     super._onCreate(...args)
-    foundry.canvas.canvas.controls.createStairwayControl(this)
+    canvas.controls.createStairwayControl(this)
 
     const { targetScene, targetData } = this.target
     if (targetData) {

@@ -15,4 +15,4 @@ import { BaseStairway } from './BaseStairway.js'
  * @param {data.StairwayData} [data={}]       Initial data provided to construct the Stairway document
  * @param {Scene} parent                The parent Scene document to which this Stairway belongs
  */
-export class StairwayDocument extends foundry.documents.abstract.CanvasDocumentMixin(foundry.documents.BaseStairway) { }
+export class StairwayDocument extends foundry.documents.abstract.CanvasDocumentMixin(BaseStairway) { }

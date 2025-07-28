@@ -32,10 +32,10 @@ export const handleTeleportRequestGM = async (data) => {
   }
 
   // remove selected tokens from current scene (keep remaining tokens)
-  await sourceScene.deleteEmbeddedDocuments(foundry.documents.BaseToken.embeddedName, selectedTokenIds, { isUndo: true })
+  await sourceScene.deleteEmbeddedDocuments(Token.embeddedName, selectedTokenIds, { isUndo: true })
 
   // add selected tokens to target scene
-  await targetScene.createEmbeddedDocuments(foundry.documents.BaseToken.embeddedName, selectedTokensData, { isUndo: true })
+  await targetScene.createEmbeddedDocuments(Token.embeddedName, selectedTokensData, { isUndo: true })
 
   if (userId === game.userId) {
     // if we self requested a teleport we can switch the scene without an event
@@ -68,26 +68,14 @@ export const handleTokenSelectRequestPlayer = async (data) => {
   // we then may end up with a different token selected
 
   // re-select tokens on target scene
-  const targetTokens = foundry.canvas.canvas.tokens.placeables.filter((token) => selectedTokenIds.indexOf(token.id) >= 0)
+  const targetTokens = canvas.tokens.placeables.filter((token) => selectedTokenIds.indexOf(token.id) >= 0)
   for (const token of targetTokens) {
     token.control()
   }
 
   // pan to stairway target
-  foundry.canvas.canvas.pan({ x: targetData.x, y: targetData.y })
+  canvas.pan({ x: targetData.x, y: targetData.y })
 
   // call hook
   Hooks.callAll('StairwayTeleport', data)
-}
-
-/// Hook modifyDocument events
-/// we need to hijack them and redirect the save location
-export const hookModifyDocument = () => {
-  const origDispatch = foundry.core.SocketInterface.prototype.constructor.dispatch
-  foundry.core.SocketInterface.prototype.constructor.dispatch = function (eventName, request) {
-    // log and report error for unexpected behaviour for further investigation
-    const reportError = (...args) => {
-      console.error(...args)
-    }
-  }
 }

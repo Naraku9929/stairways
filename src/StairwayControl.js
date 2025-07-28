@@ -1,39 +1,23 @@
 import { SETTINGS_KEY } from './settings.js'
 import { GMs, handleTeleportRequestGM } from './teleport.js'
 
-// ---------------------------------------------------------------------------
-// Foundry v13 moved the helper into foundry.canvas.loadTexture. Provide a
-// wrapper that works in both core generations.
-const loadTex = (src) => {
-  // Check if the new API exists first
-  if (foundry.canvas?.loadTexture) {
-    return foundry.canvas.loadTexture(src)
-  }
-  // Fallback to global loadTexture for older versions
-  if (typeof loadTexture !== 'undefined') {
-    return loadTexture(src)
-  }
-  // Final fallback
-  throw new Error('No texture loading function available')
-}
-
 /**
- * A ControlIcon which represents an active Stairway.
- * @extends {ControlIcon}
+ * An icon representing a Stairway Control
+ * @extends {PIXI.Container}
  */
-export class StairwayControl extends foundry.applications.api.ControlIcon {
+export class StairwayControl extends PIXI.Container {
   constructor (stairway) {
     super()
     this.stairway = stairway
-    this.hitArea = new PIXI.Rectangle(0, 0, this.stairway.width, this.stairway.height)
-    this.cursor = 'pointer'
-
-    this.registerEvents()
+    this.stairway.stairwayControl = this
   }
 
   /* -------------------------------------------- */
 
-  /** @override */
+  /**
+   * Draw the StairwayControl icon, displaying it's icon texture and border
+   * @return {Promise<StairwayControl>}
+   */
   async draw () {
     const width = this.stairway.controlIcon.width
     const height = this.stairway.controlIcon.height
@@ -42,17 +26,15 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
     const disabled = this.stairway.document.disabled === true
     const hidden = this.stairway.document.hidden === true
 
-    const PreciseTextClass = foundry.canvas.containers.PreciseText
-
     // scene label
-    this.sceneLabel = this.sceneLabel || this.addChild(new PreciseTextClass(this.stairway.sceneLabel, this.stairway.controlIcon.sceneLabelTextStyle))
+    this.sceneLabel = this.sceneLabel || this.addChild(new PreciseText(this.stairway.sceneLabel, this.stairway.controlIcon.sceneLabelTextStyle))
     this.sceneLabel.anchor.set(0.5, 1)
     this.sceneLabel.text = this.stairway.sceneLabel
     this.sceneLabel.visible = game.user.isGM
     this.sceneLabel.position.set(...this.stairway.controlIcon.sceneLabelPosition)
 
     // label
-    this.label = this.label || this.addChild(new PreciseTextClass(this.stairway.label, this.stairway.labelTextStyle))
+    this.label = this.label || this.addChild(new PreciseText(this.stairway.label, this.stairway.labelTextStyle))
     this.label.anchor.set(0.5, 0)
     this.label.text = this.stairway.label
     this.label.style = this.stairway.labelTextStyle
@@ -62,13 +44,13 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
     this.icon = this.icon || this.addChild(new PIXI.Sprite())
     this.icon.width = width
     this.icon.height = height
-    this.icon.texture = await loadTex(this.stairway.icon)
+    this.icon.texture = await loadTexture(this.stairway.icon)
 
     // lock icon
     this.lockIcon = this.lockIcon || this.addChild(new PIXI.Sprite())
     this.lockIcon.width = width * 0.5
     this.lockIcon.height = height * 0.5
-    this.lockIcon.texture = await loadTex('icons/svg/padlock.svg')
+    this.lockIcon.texture = await loadTexture('icons/svg/padlock.svg')
     this.lockIcon.visible = disabled && game.user.isGM
     this.lockIcon.position.set(width * 0.5, height * 0.5)
 
@@ -115,7 +97,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
   get isVisible () {
     const data = this.stairway.document
     const point = new PIXI.Point(data.x, data.y)
-    return foundry.canvas.canvas.visibility.testVisibility(point, { tolerance: 2, object: this })
+    return canvas.visibility.testVisibility(point, { tolerance: 2, object: this })
   }
 
   /* -------------------------------------------- */
@@ -127,7 +109,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
     if (game.paused && !game.user.isGM) return false
     this.border.visible = true
     this.bg.alpha = 0.25
-    foundry.canvas.canvas.stairways._hover = this.stairway
+    canvas.stairways._hover = this.stairway
   }
 
   /* -------------------------------------------- */
@@ -137,7 +119,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
     if (game.paused && !game.user.isGM) return false
     this.border.visible = false
     this.bg.alpha = 0
-    foundry.canvas.canvas.stairways._hover = null
+    canvas.stairways._hover = null
   }
 
   /* -------------------------------------------- */
@@ -151,7 +133,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
   async _onMouseDown (event) {
     event.stopPropagation()
 
-    const selectedTokens = foundry.canvas.canvas.tokens.controlled
+    const selectedTokens = canvas.tokens.controlled
 
     // usage restrictions for players
     if (!game.user.isGM) {
@@ -197,7 +179,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
 
     // collect required data for a teleport request
     const sourceData = this.stairway.document
-    const sourceSceneId = foundry.canvas.canvas.scene.id
+    const sourceSceneId = canvas.scene.id
     const selectedTokenIds = selectedTokens.map((token) => token.id)
     const targetSceneId = targetScene ? targetScene.id : null
     const data = { sourceSceneId, sourceData, selectedTokenIds, targetSceneId, targetData, userId: game.userId }
@@ -238,7 +220,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
           y: Math.round(targetData.y - token.h / 2)
         }
       })
-      await foundry.canvas.canvas.scene.updateEmbeddedDocuments(Token.embeddedName, tokenData, { animate })
+      await canvas.scene.updateEmbeddedDocuments(Token.embeddedName, tokenData, { animate })
 
       // Hook
       Hooks.call('StairwayTeleport', data)
@@ -250,7 +232,7 @@ export class StairwayControl extends foundry.applications.api.ControlIcon {
         await targetScene.view()
       }
 
-      foundry.canvas.canvas.pan({ x: targetData.x, y: targetData.y })
+      canvas.pan({ x: targetData.x, y: targetData.y })
     }
 
     // event handled
